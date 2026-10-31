@@ -1,0 +1,6 @@
+.venv
+data
+archive_waste_image
+.vercel-waste-backup
+__pycache__
+*.rar

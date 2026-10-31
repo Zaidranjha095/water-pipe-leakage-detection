@@ -19,6 +19,6 @@ Measured test accuracy: 94.00%. Macro F1: 93.13%.
 Current placeholders:
 
 - GitHub: [GitHub URL — add this before submission]
-- Vercel: [Vercel URL — add this before submission]
+- Vercel: https://water-pipe-leakage-detection.vercel.app
 - YouTube: [YouTube URL — add this before submission]
 - LinkedIn: [LinkedIn URL — add this before submission]

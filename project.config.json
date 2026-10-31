@@ -4,7 +4,7 @@
   "rollNumber": "SU92-BSCSM-F23-553",
   "course": "Deep Learning",
   "githubUrl": "",
-  "vercelUrl": "",
+  "vercelUrl": "https://water-pipe-leakage-detection.vercel.app",
   "youtubeUrl": "",
   "linkedinUrl": "",
   "datasetName": "Water-distribution acoustic clips (Zenodo 18631450)",
