@@ -1,0 +1,13 @@
+{
+  "title": "Smartphone Audio Water-Pipe Leakage Detection",
+  "studentName": "Zaid Ahmed",
+  "rollNumber": "SU92-BSCSM-F23-553",
+  "course": "Deep Learning",
+  "githubUrl": "",
+  "vercelUrl": "",
+  "youtubeUrl": "",
+  "linkedinUrl": "",
+  "datasetName": "Water-distribution acoustic clips (Zenodo 18631450)",
+  "datasetUrl": "https://zenodo.org/records/18631450",
+  "datasetCitation": "Acoustic data for the manuscript entitled 'Self-supervised acoustic leakage detection for water distribution systems: A real-time diagnosis framework under data scarcity'. Zenodo, 2026. https://doi.org/10.5281/zenodo.18631450"
+}

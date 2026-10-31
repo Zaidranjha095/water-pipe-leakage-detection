@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.Python
+data/
+.vercel/
+web/downloads/
+web/images/
+web/samples/
+archive_waste_image/
+*.zip
+*.rar
+.DS_Store
+Thumbs.db
+.vercel

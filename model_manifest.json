@@ -1,0 +1,24 @@
+{
+  "task": "audio-classification",
+  "framework": "pytorch",
+  "architecture": "spectrogram_cnn",
+  "weights": "weights/model.pth",
+  "onnx": "weights/model.onnx",
+  "config": "weights/config.json",
+  "classes": "weights/class_names.json",
+  "metrics": "outputs/metrics.json",
+  "predict": "python predict.py --audio <path>",
+  "build_model": "model.py:build_model",
+  "sample_rate": 16000,
+  "duration": 1.0,
+  "n_mels": 64,
+  "n_fft": 1024,
+  "hop_length": 256,
+  "n_frames": 59,
+  "class_order": [
+    "leak",
+    "no_leak",
+    "environmental_noise"
+  ],
+  "output": "logits"
+}

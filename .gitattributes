@@ -1,0 +1,7 @@
+*.pth binary
+*.onnx binary
+*.pptx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.wav binary

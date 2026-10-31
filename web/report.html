@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="index, follow">
+  <title>Project report · Water-Pipe Leakage Detection</title>
+  <link rel="icon" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,560;8..60,650&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true">
+    <canvas class="aurora"></canvas>
+    <div class="dot-grid"></div>
+    <div class="grain"></div>
+  </div>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="index.html">Water-Pipe Leakage Detection</a>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="index.html#demo">Demo</a>
+        <a href="index.html#files">Files</a>
+        <a href="downloads/presentation.pptx">Presentation</a>
+        <a href="downloads/model.pth">Weights</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap article">
+    <h1>Smartphone Audio Water-Pipe Leakage Detection</h1>
+<h2>Abstract</h2>
+<p>This project trains a compact convolutional network to classify one-second acoustic clips of a water pipe as leak, no leak, or environmental noise. The public training set is 1,000 field recordings from a water-distribution leakage-detection site (Zenodo record 18631450). Audio is resampled to 16 kHz, converted to a 64-bin log-mel spectrogram, and classified by a four-block CNN. On a held-out test split of 150 clips the model reaches 94.00% accuracy and 93.13% macro F1. Weights, an ONNX copy, a prediction script, and a browser demo are published for evaluation.</p>
+<h2>Problem statement</h2>
+<p>Hidden household and distribution-pipe leaks waste water and can stay unnoticed until damage is visible. A short recording from a phone or a cheap microphone is a low-cost screening signal. This project asks whether a small deep network can separate leak sounds from a quiet pipe and from ordinary background noise.</p>
+<p>The system is an educational demonstration. It is not a plumber, a utility alarm, or a safety controller.</p>
+<h2>Objectives</h2>
+<ul><li>Train a convolutional classifier on a public water-pipe acoustic dataset.</li><li>Keep a held-out test set out of model selection and report accuracy, per-class F1, and a confusion matrix.</li><li>Publish <code>weights/model.pth</code>, <code>model.py:build_model()</code>, and <code>python predict.py --audio &lt;path&gt;</code>.</li><li>Deploy a static page that runs the ONNX network in the browser and links the report and slides.</li><li>Document an optional smartphone recording path for later domain-specific clips.</li></ul>
+<h2>Dataset</h2>
+<p>The clips come from the Zenodo record *Acoustic data for the manuscript entitled 'Self-supervised acoustic leakage detection for water distribution systems: A real-time diagnosis framework under data scarcity'* (<a href="https://zenodo.org/records/18631450">https://zenodo.org/records/18631450</a>). Most leak and no-leak recordings were collected at an outdoor leakage-detection training base in Dongguan, China. The environmental-noise folder mixes on-site noise with public environmental clips.</p>
+<p>Class counts in the copy used here:</p>
+<div class="table-wrap"><table><thead><tr><th>Class</th><th>Clips</th></tr></thead><tbody><tr><td>leak</td><td>500</td></tr><tr><td>no_leak</td><td>386</td></tr><tr><td>environmental_noise</td><td>114</td></tr><tr><td><strong>total</strong></td><td><strong>1000</strong></td></tr></tbody></table></div>
+<p>The split is stratified with seed 42: 700 train, 150 validation, 150 test (70% / 15% / 15%). Early stopping watches validation accuracy. The test set is used once, after the checkpoint is chosen.</p>
+<p>These sensors are not smartphone microphones. The live page still accepts a WAV from a phone so an evaluator can try the intended capture device. <code>collect_audio.py</code> records extra 1-second 16 kHz clips into <code>data/raw/&lt;class&gt;/</code> if household data are added later. Phone acoustics are a domain shift; they are not claimed as the training distribution.</p>
+<p>The full archive is not committed. <code>download_dataset.py</code> fetches the three Zenodo RAR files.</p>
+<h2>Architecture</h2>
+<p>Each clip is loaded as mono audio, resampled to 16 kHz, and padded or truncated to 1.0 s (16,000 samples). A Hann-window STFT (<code>n_fft=1024</code>, <code>hop_length=256</code>, <code>center=False</code>) produces 59 frames. A 64-band Slaney mel filterbank turns power spectra into a log-mel spectrogram, referenced to the clip maximum and clipped at −80 dB. The tensor shape is <code>1 × 64 × 59</code>.</p>
+<p><code>model.py</code> defines <code>SpectrogramCNN</code>: four convolution blocks (16-32-64-128 channels) with batch normalization, ReLU, max-pooling, adaptive average pooling, dropout 0.35, and a linear head to three logits. The network has 98,019 parameters. <code>build_model(num_classes=3, pretrained=False)</code> reconstructs it. The checkpoint stores <code>state_dict</code>, <code>classes</code>, spectrogram settings, and the mel filterbank so Python and the browser share the same features.</p>
+<h2>Training</h2>
+<p>Training ran on NVIDIA GeForce RTX 5070 with batch size 32. The loss is cross-entropy with inverse-frequency weights on the training split only: leak 0.667, no_leak 0.864, environmental_noise 2.917. Adam used learning rate 0.001. Spectrograms were augmented with time rolls, frequency masks, time masks, and Gaussian noise.</p>
+<p>The run lasted 23 epochs with early stopping patience 8. Best validation accuracy was 98.00%. That checkpoint was reloaded before the test evaluation.</p>
+<h2>Results</h2>
+<p>On the held-out test set the model reaches 94.00% accuracy (141/150), 93.13% macro F1, and 93.99% weighted F1. Macro F1 treats the small noise class equally with leak.</p>
+<p>The largest confusions were 3 leak predicted as no_leak; 3 no_leak predicted as leak; 1 no_leak predicted as environmental_noise.</p>
+<div class="table-wrap"><table><thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead><tbody><tr><td>leak</td><td>94.74%</td><td>96.00%</td><td>95.36%</td><td>75</td></tr><tr><td>no_leak</td><td>93.10%</td><td>93.10%</td><td>93.10%</td><td>58</td></tr><tr><td>environmental_noise</td><td>93.75%</td><td>88.24%</td><td>90.91%</td><td>17</td></tr></tbody></table></div>
+<figure class="figure"><img src="images/training_curves.png" alt="Training and validation accuracy"><figcaption>Training and validation accuracy</figcaption></figure>
+<figure class="figure"><img src="images/confusion_matrix.png" alt="Test confusion matrix"><figcaption>Test confusion matrix</figcaption></figure>
+<p>Confusion matrix (rows true, columns predicted), class order leak / no_leak / environmental_noise:</p>
+<pre><code>[[72, 3, 0], [3, 54, 1], [1, 1, 15]]</code></pre>
+<h2>Web deployment and repository</h2>
+<p>The static site in <code>web/</code> states the problem, the dataset, the code layout, and these results. Uploading a WAV, or clicking a sample, computes the same log-mel spectrogram in the browser and runs <code>model.onnx</code> with ONNX Runtime Web.</p>
+<p>Canonical files for an automated check:</p>
+<ul><li><code>weights/model.pth</code> — PyTorch checkpoint</li><li><code>weights/model.onnx</code> — browser copy of the same network</li><li><code>weights/config.json</code> — class order, STFT settings, and mel filterbank</li><li><code>weights/class_names.json</code> — class order alone</li><li><code>model_manifest.json</code> — paths and the prediction command</li><li><code>model.py</code> — <code>build_model()</code></li><li><code>predict.py</code> — prints JSON probabilities for one clip</li><li><code>outputs/metrics.json</code> — the numbers in this report</li></ul>
+<p>Command-line prediction:</p>
+<pre><code>python predict.py --audio samples/leak.wav</code></pre>
+<p>Loading the checkpoint in Python:</p>
+<pre><code>import torch
+from model import build_model
+
+checkpoint = torch.load(&quot;weights/model.pth&quot;, map_location=&quot;cpu&quot;, weights_only=False)
+model = build_model(num_classes=len(checkpoint[&quot;classes&quot;]), pretrained=False)
+model.load_state_dict(checkpoint[&quot;state_dict&quot;])
+model.eval()</code></pre>
+<p>Class order is leak, no_leak, environmental_noise. The network returns logits.</p>
+<h2>Limitations</h2>
+<ul><li>Training audio comes from field acoustic sensors at a leakage-training site, not from a typical smartphone next to a kitchen tap.</li><li>Environmental noise has only 114 clips, so its F1 is a noisier estimate than leak.</li><li>Background speech, overlapping appliances, and other pipe materials are outside this distribution.</li><li>The demo can be confidently wrong on a phone recording. It is not a safety instruction.</li></ul>
+<h2>Reproducibility</h2>
+<pre><code>python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python download_dataset.py
+.venv\Scripts\python train.py
+.venv\Scripts\python build_docs.py
+node prepare_site.js</code></pre>
+<p>CPU training also finishes, because the spectrograms are small. This machine used CUDA 12.8 on an RTX 5070. <code>train.py</code> falls back to CPU if a CUDA kernel cannot run.</p>
+<h2>References</h2>
+<p>1. Acoustic data for *Self-supervised acoustic leakage detection for water distribution systems: A real-time diagnosis framework under data scarcity*. Zenodo, 2026. https://zenodo.org/records/18631450 2. Acoustic data for the manuscript entitled 'Self-supervised acoustic leakage detection for water distribution systems: A real-time diagnosis framework under data scarcity'. Zenodo, 2026. https://doi.org/10.5281/zenodo.18631450 3. McFee, Brian, et al. librosa. STFT and mel filterbank used for features. 4. ONNX Runtime Web 1.22 for in-browser inference.</p>
+<p>Zaid Ahmed · SU92-BSCSM-F23-553 · Deep Learning</p>
+  </main>
+  <script src="backdrop.js"></script>
+</body>
+</html>

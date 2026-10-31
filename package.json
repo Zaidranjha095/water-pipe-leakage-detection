@@ -1,0 +1,8 @@
+{
+  "name": "water-pipe-leakage-detection",
+  "private": true,
+  "scripts": {
+    "build": "node prepare_site.js",
+    "start": "npx --yes serve web -p 4173"
+  }
+}

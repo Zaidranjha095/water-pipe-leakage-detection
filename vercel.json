@@ -1,0 +1,6 @@
+{
+  "buildCommand": "node prepare_site.js",
+  "outputDirectory": "web",
+  "installCommand": "node -e \"console.log('static site, no install')\"",
+  "framework": null
+}
