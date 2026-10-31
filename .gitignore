@@ -13,3 +13,4 @@ archive_waste_image/
 .DS_Store
 Thumbs.db
 .vercel
+.vercel-waste-backup/
