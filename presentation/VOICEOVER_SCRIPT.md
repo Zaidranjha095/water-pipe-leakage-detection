@@ -33,4 +33,4 @@ Evaluator weights/model.pth download kare. ONNX file browser ke liye hai. Comman
 Field sensors kitchen phone nahi. Noise class chhoti hai. collect_audio.py se baad mein ghar ki clips add ho sakti hain. Demo ko safety decision mat banao.
 
 ## Links
-GitHub [GitHub URL — add this before submission]. Site https://water-pipe-leakage-detection.vercel.app. Walkthrough [YouTube URL — add this before submission]. LinkedIn [LinkedIn URL — add this before submission]. Shukriya.
+GitHub https://github.com/Zaidranjha095/water-pipe-leakage-detection. Site https://water-pipe-leakage-detection.vercel.app. Walkthrough [YouTube URL — add this before submission]. LinkedIn [LinkedIn URL — add this before submission]. Shukriya.

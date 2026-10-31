@@ -12,5 +12,6 @@ archive_waste_image/
 *.rar
 .DS_Store
 Thumbs.db
+~$*
 .vercel
 .vercel-waste-backup/
