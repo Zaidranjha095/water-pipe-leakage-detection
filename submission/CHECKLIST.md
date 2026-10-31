@@ -20,5 +20,5 @@ Current placeholders:
 
 - GitHub: https://github.com/Zaidranjha095/water-pipe-leakage-detection
 - Vercel: https://water-pipe-leakage-detection.vercel.app
-- YouTube: [YouTube URL — add this before submission]
-- LinkedIn: [LinkedIn URL — add this before submission]
+- YouTube: https://youtu.be/wDVgfvbutMc
+- LinkedIn: https://www.linkedin.com/posts/zaid-ahmad-0bb173252_deeplearning-audioclassification-computervision-share-7522126288854151168-DFHo

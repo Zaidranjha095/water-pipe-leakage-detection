@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 .Python
 data/
+web/edge_wavs/
+scripts/edge_wavs/
+*.mp4
 .vercel/
 web/downloads/
 web/images/

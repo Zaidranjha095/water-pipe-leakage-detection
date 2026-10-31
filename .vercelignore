@@ -4,3 +4,9 @@ archive_waste_image
 .vercel-waste-backup
 __pycache__
 *.rar
+web/edge_wavs
+scripts/edge_wavs
+scripts/compare_js_logmel.py
+scripts/make_edge_wavs.py
+presentation.mp4
+presentation/presentation.mp4

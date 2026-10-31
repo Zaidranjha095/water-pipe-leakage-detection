@@ -189,35 +189,29 @@ function reportPage(body) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
-  <title>Project report · Water-Pipe Leakage Detection</title>
+  <title>Project report · WaterGuard AI</title>
   <link rel="icon" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,560;8..60,650&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600&family=Fraunces:opsz,wght@9..144,560&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="backdrop" aria-hidden="true">
-    <canvas class="aurora"></canvas>
-    <div class="dot-grid"></div>
-    <div class="grain"></div>
-  </div>
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="brand" href="index.html">Water-Pipe Leakage Detection</a>
+      <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span><span><strong>WaterGuard AI</strong><small>Project report</small></span></a>
       <nav>
         <a href="index.html">Overview</a>
-        <a href="index.html#demo">Demo</a>
-        <a href="index.html#files">Files</a>
+        <a href="index.html#demo">Live demo</a>
+        <a href="index.html#downloads">Downloads</a>
         <a href="downloads/presentation.pptx">Presentation</a>
-        <a href="downloads/model.pth">Weights</a>
       </nav>
     </div>
   </header>
-  <main class="wrap article">
+  <main class="article">
     ${body}
   </main>
-  <script src="backdrop.js"></script>
+  <footer class="site-footer"><div class="wrap"><p>Zaid Ahmed · SU92-BSCSM-F23-553 · Deep Learning</p></div></footer>
 </body>
 </html>
 `;
@@ -258,9 +252,20 @@ const metrics = readJson("outputs/metrics.json");
 const classes = metrics.class_order;
 const counts = metrics.counts;
 
-const datasetHtml = `<ul class="counts">
+const CLASS_LABELS = {
+  leak: "Leak",
+  no_leak: "No leak",
+  environmental_noise: "Environmental noise",
+};
+
+const datasetHtml = `<ul class="dist">
 ${classes
-  .map((name) => `<li><span>${escapeHtml(name)}</span><strong>${counts.all[name]}</strong></li>`)
+  .map((name) => {
+    const count = counts.all[name];
+    const width = ((count / counts.total) * 100).toFixed(1);
+    const label = CLASS_LABELS[name] || name;
+    return `<li><span>${escapeHtml(label)}</span><i style="--w:${width}%"></i><strong>${count}</strong></li>`;
+  })
   .join("\n")}
 </ul>
 <p>${counts.total} clips total. Split ${counts.train.total} train / ${counts.val.total} validation / ${counts.test.total} test.</p>`;
@@ -279,7 +284,7 @@ const resultsHtml = `<div class="stats">
   <article class="stat"><span>Best validation accuracy</span><strong>${pct(metrics.training.best_val_accuracy)}</strong></article>
   <article class="stat"><span>Epochs run</span><strong>${metrics.training.epochs_ran}</strong></article>
 </div>
-<p class="fine">Trained on ${escapeHtml(device)}. The network has ${Number(metrics.training.parameter_count).toLocaleString("en-US")} parameters. Weighted F1 is ${pct(metrics.test.weighted_f1)}. ${escapeHtml(confusionNote(metrics))}</p>
+<p class="fine">Trained on ${escapeHtml(device)}. The network has ${Number(metrics.training.parameter_count).toLocaleString("en-US")} parameters. Weighted F1 is ${pct(metrics.test.weighted_f1)}. Best validation accuracy ${pct(metrics.training.best_val_accuracy)} is the peak on the 150-clip val split, not the last epoch. ${escapeHtml(confusionNote(metrics))}</p>
 <div class="table-wrap"><table>
   <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
   <tbody>${rows}</tbody>

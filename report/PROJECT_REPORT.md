@@ -33,7 +33,7 @@ Class counts in the copy used here:
 
 The split is stratified with seed 42: 700 train, 150 validation, 150 test (70% / 15% / 15%). Early stopping watches validation accuracy. The test set is used once, after the checkpoint is chosen.
 
-These sensors are not smartphone microphones. The live page still accepts a WAV from a phone so an evaluator can try the intended capture device. `collect_audio.py` records extra 1-second 16 kHz clips into `data/raw/<class>/` if household data are added later. Phone acoustics are a domain shift; they are not claimed as the training distribution.
+These sensors are not smartphone microphones. The live page still accepts a WAV as an experimental evaluation interface. Phone performance has not been independently validated. `collect_audio.py` records extra 1-second 16 kHz clips into `data/raw/<class>/` if household data are added later. Phone acoustics are a domain shift; they are not the training distribution.
 
 The full archive is not committed. `download_dataset.py` fetches the three Zenodo RAR files.
 
@@ -47,7 +47,7 @@ Each clip is loaded as mono audio, resampled to 16 kHz, and padded or truncated 
 
 Training ran on NVIDIA GeForce RTX 5070 with batch size 32. The loss is cross-entropy with inverse-frequency weights on the training split only: leak 0.667, no_leak 0.864, environmental_noise 2.917. Adam used learning rate 0.001. Spectrograms were augmented with time rolls, frequency masks, time masks, and Gaussian noise.
 
-The run lasted 23 epochs with early stopping patience 8. Best validation accuracy was 98.00%. That checkpoint was reloaded before the test evaluation.
+The run lasted 23 epochs with early stopping patience 8. Best validation accuracy was 98.00% at epoch 15. Later validation scores moved on the 150-clip split because spectrogram augment is stochastic and the val set is small; the saved weights are the peak checkpoint, not the last epoch. That checkpoint was reloaded before the test evaluation.
 
 ## Results
 
@@ -73,12 +73,12 @@ Confusion matrix (rows true, columns predicted), class order leak / no_leak / en
 
 ## Web deployment and repository
 
-The static site in `web/` states the problem, the dataset, the code layout, and these results. Uploading a WAV, or clicking a sample, computes the same log-mel spectrogram in the browser and runs `model.onnx` with ONNX Runtime Web.
+The static site in `web/` states the problem, the dataset, the code layout, and these results. Sample buttons use field-sensor clips from the training distribution. Uploading a WAV is an experimental check: the browser computes the same log-mel spectrogram and runs the ONNX network with ONNX Runtime Web.
 
 Canonical files for an automated check:
 
-- `weights/model.pth` — PyTorch checkpoint
-- `weights/model.onnx` — browser copy of the same network
+- `weights/model.pth` — PyTorch checkpoint in the repository
+- `weights/model.onnx` — ONNX export in the repository; the live page copies it to `downloads/model.onnx` at build (`site_onnx` in `model_manifest.json`)
 - `weights/config.json` — class order, STFT settings, and mel filterbank
 - `weights/class_names.json` — class order alone
 - `model_manifest.json` — paths and the prediction command

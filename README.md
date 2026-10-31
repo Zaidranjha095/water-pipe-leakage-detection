@@ -26,7 +26,7 @@ Class order: leak, no_leak, environmental_noise. The network returns logits.
 python predict.py --audio samples/leak.wav
 ```
 
-`model_manifest.json` lists the same paths. `weights/model.onnx` is the browser copy.
+`model_manifest.json` lists repository paths (`weights/`) and site aliases (`downloads/`). The browser loads `downloads/model.onnx`, copied from `weights/model.onnx` at build.
 
 ## Project layout
 

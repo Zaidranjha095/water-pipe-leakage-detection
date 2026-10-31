@@ -10,6 +10,12 @@ let session = null;
 let config = null;
 let classNames = ["leak", "no_leak", "environmental_noise"];
 let previewUrl = "";
+let sharedAudioContext = null;
+let stageToken = 0;
+let inferToken = 0;
+let inferBusy = false;
+let loadFailed = false;
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -28,10 +34,39 @@ function hann(size) {
     window[0] = 1;
     return window;
   }
+  // numpy.hanning(M) = 0.5 - 0.5 * cos(2 pi n / (M - 1))
   for (let i = 0; i < size; i += 1) {
     window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (size - 1));
   }
   return window;
+}
+
+function mixToMono(buffer) {
+  const frames = buffer.length;
+  const channels = buffer.numberOfChannels;
+  if (channels === 1) return buffer.getChannelData(0);
+  const mixed = new Float32Array(frames);
+  for (let channel = 0; channel < channels; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    for (let i = 0; i < frames; i += 1) mixed[i] += data[i];
+  }
+  const scale = 1 / channels;
+  for (let i = 0; i < frames; i += 1) mixed[i] *= scale;
+  return mixed;
+}
+
+function peakAmplitude(samples) {
+  let peak = 0;
+  for (let i = 0; i < samples.length; i += 1) peak = Math.max(peak, Math.abs(samples[i]));
+  return peak;
+}
+
+async function getAudioContext() {
+  if (sharedAudioContext && sharedAudioContext.state !== "closed") return sharedAudioContext;
+  const Ctor = window.AudioContext || window.webkitAudioContext;
+  if (!Ctor) throw new Error("This browser cannot decode audio.");
+  sharedAudioContext = new Ctor();
+  return sharedAudioContext;
 }
 
 function fftRadix2(real, imag) {
@@ -133,72 +168,280 @@ function logMel(samples, cfg) {
 }
 
 async function decodeFile(file) {
+  if (!config) throw new Error("The model configuration is still loading.");
   const buffer = await file.arrayBuffer();
-  const context = new AudioContext();
+  const context = await getAudioContext();
   const decoded = await context.decodeAudioData(buffer.slice(0));
-  const channel = decoded.getChannelData(0);
+  const channel = mixToMono(decoded);
   const resampled = resample(channel, decoded.sampleRate, config.sample_rate);
-  await context.close();
-  return fixLength(resampled, Math.round(config.sample_rate * config.duration));
+  const samples = fixLength(resampled, Math.round(config.sample_rate * config.duration));
+  if (!samples.length || peakAmplitude(samples) < 1e-7) {
+    throw new Error("This recording is silent. Choose a clip that contains sound.");
+  }
+  return { samples, sourceRate: decoded.sampleRate, sourceSeconds: decoded.duration, channels: decoded.numberOfChannels };
+}
+
+const LABELS = {
+  leak: "Leak",
+  no_leak: "No leak",
+  environmental_noise: "Environmental noise",
+};
+const TONES = { leak: "is-leak", no_leak: "is-clear", environmental_noise: "is-noise" };
+const HEADLINES = {
+  leak: "Leak detected",
+  no_leak: "No leak detected",
+  environmental_noise: "Environmental noise",
+};
+
+const analyzeBtn = document.querySelector("#analyze");
+const resetBtn = document.querySelector("#reset");
+const fileMeta = document.querySelector("#file-meta");
+const outcome = document.querySelector("#outcome");
+const waveCanvas = document.querySelector("#wave");
+const melCanvas = document.querySelector("#mel");
+let pendingSamples = null;
+let pendingName = "";
+
+function pretty(name) {
+  return LABELS[name] || name;
+}
+
+function drawWave(samples) {
+  if (!waveCanvas) return;
+  waveCanvas.hidden = false;
+  const ctx = waveCanvas.getContext("2d");
+  const width = waveCanvas.width;
+  const height = waveCanvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = "#00C9B7";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const step = Math.max(1, Math.floor(samples.length / width));
+  for (let x = 0; x < width; x += 1) {
+    const start = x * step;
+    let min = 1;
+    let max = -1;
+    for (let i = 0; i < step && start + i < samples.length; i += 1) {
+      const value = samples[start + i];
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+    ctx.moveTo(x + 0.5, height / 2 - max * (height * 0.42));
+    ctx.lineTo(x + 0.5, height / 2 - min * (height * 0.42));
+  }
+  ctx.stroke();
+}
+
+function drawMel(spec) {
+  if (!melCanvas || !config) return;
+  melCanvas.hidden = false;
+  const ctx = melCanvas.getContext("2d");
+  const width = melCanvas.width;
+  const height = melCanvas.height;
+  const frames = config.n_frames;
+  const mels = config.n_mels;
+  ctx.clearRect(0, 0, width, height);
+  const cellW = width / frames;
+  const cellH = height / mels;
+  for (let mel = 0; mel < mels; mel += 1) {
+    for (let frame = 0; frame < frames; frame += 1) {
+      const value = (spec[mel * frames + frame] + 80) / 80;
+      const tone = Math.max(0, Math.min(255, Math.round(value * 255)));
+      ctx.fillStyle = `rgb(${Math.round(tone * 0.15)}, ${Math.round(40 + tone * 0.7)}, ${Math.round(80 + tone * 0.6)})`;
+      ctx.fillRect(frame * cellW, (mels - 1 - mel) * cellH, Math.ceil(cellW), Math.ceil(cellH));
+    }
+  }
 }
 
 function renderBars(probabilities) {
-  const ranked = classNames
-    .map((name, index) => ({ name, score: probabilities[index] }))
-    .sort((a, b) => b.score - a.score);
-  barsEl.innerHTML = ranked.map((row, order) => {
-    const width = Math.max(2, Math.round(row.score * 100));
-    return `<div class="bar-row${order === 0 ? " top" : ""}"><span>${row.name}</span><div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div><strong>${(row.score * 100).toFixed(1)}%</strong></div>`;
+  barsEl.innerHTML = classNames.map((name, index) => {
+    const score = probabilities[index];
+    const width = Math.max(0, score * 100);
+    const label = pretty(name);
+    return `<div class="bar-row"><span>${label}</span><div class="bar-track" role="meter" aria-label="${label} confidence" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${width.toFixed(1)}"><div class="bar-fill" style="width:${width}%"></div></div><strong>${width.toFixed(1)}%</strong></div>`;
   }).join("");
 }
 
-async function infer(samples) {
-  if (!session) throw new Error("Model is still loading.");
-  const spec = logMel(samples, config);
-  const tensor = new ort.Tensor("float32", spec, [1, 1, config.n_mels, config.n_frames]);
-  const result = await session.run({ spectrogram: tensor });
-  const logits = Array.from(result.logits.data);
-  const probabilities = softmax(logits);
-  const best = probabilities.indexOf(Math.max(...probabilities));
-  classEl.textContent = classNames[best];
-  confEl.textContent = `${(probabilities[best] * 100).toFixed(1)}% confidence`;
-  renderBars(probabilities);
-  setStatus("Prediction ready. This is an educational demo, not a plumbing decision.");
+function clearPrediction() {
+  outcome.className = "outcome";
+  classEl.textContent = "Awaiting analysis";
+  confEl.textContent = "Choose a sample or a WAV, then run analysis.";
+  barsEl.innerHTML = "";
 }
 
-async function runBlob(blob, name) {
+function setAnalyzeEnabled() {
+  analyzeBtn.disabled = !session || !pendingSamples || inferBusy || loadFailed;
+}
+
+async function infer(samples) {
+  if (inferBusy) return;
+  if (!session) throw new Error("The ONNX model is not loaded yet.");
+  inferBusy = true;
+  const token = ++inferToken;
+  setAnalyzeEnabled();
+  setStatus("Running the network…");
+  try {
+    const spec = logMel(samples, config);
+    if (spec.length !== config.n_mels * config.n_frames) {
+      throw new Error(`Spectrogram shape mismatch: expected ${config.n_mels}×${config.n_frames}.`);
+    }
+    drawMel(spec);
+    const tensor = new ort.Tensor("float32", spec, [1, 1, config.n_mels, config.n_frames]);
+    const result = await session.run({ spectrogram: tensor });
+    if (token !== inferToken) return;
+    const output = result.logits || result[Object.keys(result)[0]];
+    const logits = Array.from(output.data);
+    const probabilities = softmax(logits);
+    const best = probabilities.indexOf(Math.max(...probabilities));
+    const name = classNames[best];
+    outcome.className = `outcome ${TONES[name] || ""}`;
+    classEl.textContent = HEADLINES[name] || pretty(name);
+    confEl.textContent = `${(probabilities[best] * 100).toFixed(1)}% confidence · ${pretty(name)}`;
+    renderBars(probabilities);
+    setStatus("Prediction ready. This is an educational demo, not a plumbing decision.");
+  } finally {
+    if (token === inferToken) inferBusy = false;
+    setAnalyzeEnabled();
+  }
+}
+
+function describeFile(blob, name, decoded) {
+  const size = blob.size ? `${Math.max(1, Math.round(blob.size / 1024))} KB` : "sample";
+  const sourceSeconds = decoded.sourceSeconds.toFixed(2);
+  const channels = decoded.channels === 1 ? "mono" : `${decoded.channels}-channel`;
+  return `${name} · ${channels} · ${Math.round(decoded.sourceRate)} Hz · ${sourceSeconds} s source · resampled to ${config.sample_rate} Hz / ${config.duration.toFixed(1)} s`;
+}
+
+async function stageBlob(blob, name) {
+  const token = ++stageToken;
+  inferToken += 1;
+  inferBusy = false;
+  pendingSamples = null;
+  setAnalyzeEnabled();
   setStatus("Reading audio…");
+  clearPrediction();
   if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = "";
+  if (blob.size === 0) {
+    setStatus("This file is empty.");
+    throw new Error("This file is empty.");
+  }
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    setStatus("This file is larger than 12 MB. Use a short WAV clip.");
+    throw new Error("This file is larger than 12 MB. Use a short WAV clip.");
+  }
   previewUrl = URL.createObjectURL(blob);
   previewEl.src = previewUrl;
   previewEl.hidden = false;
-  const samples = await decodeFile(new File([blob], name || "clip.wav"));
-  await infer(samples);
+  previewEl.load();
+  const file = blob instanceof File ? blob : new File([blob], name || "clip.wav");
+  let decoded;
+  try {
+    decoded = await decodeFile(file);
+  } catch (error) {
+    if (token !== stageToken) return;
+    pendingSamples = null;
+    setAnalyzeEnabled();
+    const message = String(error && error.message ? error.message : error);
+    if (message.includes("silent")) {
+      setStatus(message);
+      throw error;
+    }
+    setStatus("This file could not be read as audio. Choose a WAV recording.");
+    throw new Error("This file could not be read as audio. Choose a WAV recording.");
+  }
+  if (token !== stageToken) return;
+  pendingSamples = decoded.samples;
+  pendingName = name || file.name;
+  fileMeta.hidden = false;
+  fileMeta.textContent = describeFile(blob, pendingName, decoded);
+  drawWave(pendingSamples);
+  if (melCanvas) {
+    melCanvas.getContext("2d").clearRect(0, 0, melCanvas.width, melCanvas.height);
+    melCanvas.hidden = true;
+  }
+  setAnalyzeEnabled();
+  setStatus(session ? "Audio ready. Press Analyze audio." : (loadFailed ? "The model failed to load, so analysis is unavailable." : "Audio ready. Waiting for the model."));
 }
 
-async function runUrl(url) {
+async function stageUrl(url) {
   const response = await fetch(url);
+  if (!response.ok) throw new Error("Sample audio could not be loaded.");
   const blob = await response.blob();
-  await runBlob(blob, url.split("/").pop());
+  await stageBlob(blob, url.split("/").pop());
+}
+
+function resetDemo() {
+  stageToken += 1;
+  inferToken += 1;
+  inferBusy = false;
+  pendingSamples = null;
+  pendingName = "";
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = "";
+  previewEl.removeAttribute("src");
+  previewEl.hidden = true;
+  fileMeta.hidden = true;
+  fileMeta.textContent = "";
+  fileInput.value = "";
+  setAnalyzeEnabled();
+  clearPrediction();
+  if (waveCanvas) {
+    waveCanvas.getContext("2d").clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+    waveCanvas.hidden = true;
+  }
+  if (melCanvas) {
+    melCanvas.getContext("2d").clearRect(0, 0, melCanvas.width, melCanvas.height);
+    melCanvas.hidden = true;
+  }
+  document.querySelectorAll(".sample").forEach((button) => button.classList.remove("is-selected"));
+  if (loadFailed) setStatus("Could not load the ONNX model. Check the network and refresh.");
+  else if (session) setStatus("Model loaded. Choose a sample or upload a WAV.");
+  else setStatus("Loading the ONNX model…");
 }
 
 async function boot() {
   try {
+    if (typeof ort === "undefined") throw new Error("ONNX Runtime failed to load from the CDN.");
     ort.env.wasm.numThreads = 1;
-    config = await (await fetch("downloads/config.json")).json();
+    const configResponse = await fetch("downloads/config.json");
+    if (!configResponse.ok) throw new Error("config.json could not be downloaded.");
+    config = await configResponse.json();
     classNames = config.classes;
     session = await ort.InferenceSession.create("downloads/model.onnx", { executionProviders: ["wasm"] });
+    loadFailed = false;
     setStatus("Model loaded. Choose a sample or upload a WAV.");
+    setAnalyzeEnabled();
   } catch (error) {
+    loadFailed = true;
+    session = null;
+    setAnalyzeEnabled();
     setStatus(`Could not load the model: ${error.message}`);
   }
 }
 
 document.querySelectorAll(".sample").forEach((button) => {
   button.addEventListener("click", () => {
-    runUrl(button.dataset.src).catch((error) => setStatus(error.message));
+    document.querySelectorAll(".sample").forEach((item) => item.classList.remove("is-selected"));
+    button.classList.add("is-selected");
+    stageUrl(button.dataset.src).catch((error) => setStatus(error.message));
   });
 });
+
+analyzeBtn.addEventListener("click", () => {
+  if (inferBusy) return;
+  if (!pendingSamples) {
+    setStatus("Choose a recording before analysis.");
+    return;
+  }
+  infer(pendingSamples).catch((error) => {
+    setStatus(error.message);
+  });
+});
+
+resetBtn.addEventListener("click", resetDemo);
+
+document.querySelector("#browse").addEventListener("click", () => fileInput.click());
 
 dropzone.addEventListener("dragover", (event) => {
   event.preventDefault();
@@ -209,11 +452,46 @@ dropzone.addEventListener("drop", (event) => {
   event.preventDefault();
   dropzone.classList.remove("dragover");
   const file = event.dataTransfer.files[0];
-  if (file) runBlob(file, file.name).catch((error) => setStatus(error.message));
+  if (file) stageBlob(file, file.name).catch((error) => setStatus(error.message));
+});
+dropzone.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    fileInput.click();
+  }
 });
 fileInput.addEventListener("change", () => {
   const file = fileInput.files[0];
-  if (file) runBlob(file, file.name).catch((error) => setStatus(error.message));
+  if (file) stageBlob(file, file.name).catch((error) => setStatus(error.message));
 });
+
+const navToggle = document.querySelector("#nav-toggle");
+const nav = document.querySelector("#site-nav");
+if (navToggle && nav) {
+  navToggle.addEventListener("click", () => {
+    const open = nav.classList.toggle("is-open");
+    navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  nav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("is-open");
+      navToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+}
+
+const sections = [...document.querySelectorAll("main section[id]")];
+const navLinks = [...document.querySelectorAll("#site-nav a[href^='#']")];
+if ("IntersectionObserver" in window) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      navLinks.forEach((link) => {
+        link.classList.toggle("is-active", link.getAttribute("href") === `#${entry.target.id}`);
+      });
+    });
+  }, { rootMargin: "-40% 0px -50% 0px", threshold: 0.01 });
+  sections.forEach((section) => observer.observe(section));
+}
 
 boot();

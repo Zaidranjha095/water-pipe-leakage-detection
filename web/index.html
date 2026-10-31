@@ -4,197 +4,320 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
-  <meta name="description" content="Deep learning semester project: spectrogram CNN for water-pipe leak audio, with downloadable weights and a browser demo.">
-  <title>Water-Pipe Leakage Detection</title>
+  <meta name="description" content="Explore an intelligent CNN-based water pipe leakage detection system that analyzes acoustic recordings using deep learning and browser-based ONNX inference.">
+  <meta property="og:title" content="WaterGuard AI | Deep Learning Water Pipe Leakage Detection">
+  <meta property="og:description" content="A semester project that classifies one-second acoustic clips as leak, no leak, or environmental noise. Test accuracy 94.00%.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://water-pipe-leakage-detection.vercel.app/">
+  <title>WaterGuard AI | Deep Learning Water Pipe Leakage Detection</title>
   <link rel="icon" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,560;8..60,650&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,560;9..144,640&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="backdrop" aria-hidden="true">
-    <canvas class="aurora"></canvas>
-    <div class="dot-grid"></div>
-    <div class="grain"></div>
-  </div>
+<body class="home">
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="brand" href="index.html">Water-Pipe Leakage Detection</a>
-      <nav>
+      <a class="brand" href="#overview">
+        <span class="mark" aria-hidden="true"></span>
+        <span>
+          <strong>WaterGuard AI</strong>
+          <small>Intelligent Acoustic Leak Detection</small>
+        </span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation">Menu</button>
+      <nav id="site-nav" aria-label="Page">
         <a href="#overview">Overview</a>
+        <a href="#technology">Technology</a>
         <a href="#dataset">Dataset</a>
-        <a href="#demo">Demo</a>
+        <a href="#demo">Live Demo</a>
         <a href="#results">Results</a>
-        <a href="#files">Files</a>
-        <a href="report.html">Report</a>
+        <a href="#downloads">Downloads</a>
+        <a class="nav-cta" href="#demo">Try demo</a>
       </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main>
     <section class="hero" id="overview">
-      <div class="hero-copy">
-        <p class="eyebrow">Deep Learning semester project</p>
-        <h1>Smartphone audio water-pipe leakage detection</h1>
-        <p class="lede">A compact CNN listens to a one-second clip and classifies it as leak, no leak, or environmental noise. The weights are public, and this page runs the same network in the browser from a WAV file.</p>
-        <!--STUDENT:START-->
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">Deep Learning semester project</p>
+          <h1>Detect Water Pipe Leaks Through Sound Intelligence.</h1>
+          <p class="lede">A Deep Learning semester project that classifies one-second field acoustic clips as leak, no leak, or environmental noise. The reported scores come from Dongguan field sensors (Zenodo 18631450), not from a typical smartphone microphone.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#demo">Try live detection</a>
+            <a class="btn btn-ghost" href="#technology">Explore research</a>
+          </div>
+          <!--STUDENT:START-->
 <p class="byline">Zaid Ahmed · SU92-BSCSM-F23-553 · Deep Learning</p>
 <!--STUDENT:END-->
-      </div>
-      <ul class="facts">
-        <li><span>Architecture</span><strong>Spectrogram CNN</strong></li>
-        <li><span>Dataset</span><strong>1,000 acoustic clips</strong></li>
-        <li><span>Task</span><strong>3-class audio classification</strong></li>
-      </ul>
-    </section>
-
-    <section class="grid-2">
-      <article class="panel">
-        <h2>Problem</h2>
-        <p>A pipe leak can run for a long time before anyone sees water. A short microphone recording is cheap to capture at a tap or joint, and it is enough signal for a first automated guess.</p>
-        <p>This project trains a small convolutional network for that three-way decision, saves the weights in a form an evaluator can download, and demonstrates predictions without a GPU server.</p>
-      </article>
-      <article class="panel">
-        <h2>Method</h2>
-        <ul class="method-list">
-          <li>Dataset: <a href="https://zenodo.org/records/18631450">Zenodo 18631450</a> water-distribution acoustic clips.</li>
-          <li>Features: 16 kHz, 1.0 s, 64-bin log-mel spectrogram, shape 1×64×59.</li>
-          <li>Architecture: four-block CNN in <code>model.py</code>, 98,019 parameters.</li>
-          <li>Checkpoint: <a href="downloads/model.pth">weights/model.pth</a> with key <code>state_dict</code>.</li>
-          <li>Reference inference: <code>python predict.py --audio &lt;path&gt;</code>.</li>
-        </ul>
-      </article>
-    </section>
-
-    <section id="dataset">
-      <h2>Dataset and code</h2>
-      <div class="grid-2">
-        <div>
-          <p>Most leak and no-leak recordings come from an outdoor leakage-detection training base in Dongguan. Environmental-noise clips mix on-site noise with public background audio. The split is stratified, 70% train / 15% validation / 15% test, seed 42. The archive is downloaded by <code>download_dataset.py</code> and is not stored in Git. One test clip per class is kept in <code>samples/</code>.</p>
-          <!--DATASET:START-->
-<ul class="counts">
-<li><span>leak</span><strong>500</strong></li>
-<li><span>no_leak</span><strong>386</strong></li>
-<li><span>environmental_noise</span><strong>114</strong></li>
-</ul>
-<p>1000 clips total. Split 700 train / 150 validation / 150 test.</p>
-<!--DATASET:END-->
-          <p class="fine">Citation: acoustic data accompanying the water-distribution leakage-detection manuscript. <a href="https://zenodo.org/records/18631450">zenodo.org/records/18631450</a>.</p>
+          <ul class="hero-stats">
+            <li><strong>94.00%</strong><span>Test accuracy</span></li>
+            <li><strong>93.13%</strong><span>Macro F1</span></li>
+            <li><strong>1,000</strong><span>Acoustic clips</span></li>
+          </ul>
         </div>
-        <article class="panel">
-          <h3>Repository layout</h3>
-          <pre><code>download_dataset.py
-train.py
-model.py
-predict.py
-collect_audio.py
-weights/model.pth
-weights/model.onnx
-outputs/metrics.json</code></pre>
-        </article>
+        <figure class="hero-visual" aria-hidden="true">
+          <svg viewBox="0 0 560 420" role="img">
+            <title>Pipeline, acoustic wave, and three-class classifier</title>
+            <rect x="24" y="48" width="512" height="18" rx="9" fill="#12304d"/>
+            <rect x="24" y="78" width="512" height="10" rx="5" fill="#00C9B7" opacity="0.85"/>
+            <circle cx="430" cy="68" r="16" fill="none" stroke="#37CFFF" stroke-width="3"/>
+            <circle cx="430" cy="68" r="5" fill="#37CFFF"/>
+            <path d="M40 180c28-36 48-36 76 0s48 36 76 0 48-36 76 0 48 36 76 0 48-36 76 0 40 28 64 0" fill="none" stroke="#00C9B7" stroke-width="3"/>
+            <path d="M40 214c28-18 48-18 76 0s48 18 76 0 48-18 76 0 48 18 76 0 48-18 76 0 40 14 64 0" fill="none" stroke="#37CFFF" stroke-width="2" opacity="0.7"/>
+            <rect x="70" y="270" width="90" height="64" rx="8" fill="#0B1F35" stroke="#1d3e5c"/>
+            <rect x="190" y="250" width="110" height="84" rx="8" fill="#0B1F35" stroke="#00C9B7"/>
+            <rect x="330" y="270" width="150" height="64" rx="8" fill="#0B1F35" stroke="#1d3e5c"/>
+            <text x="115" y="306" text-anchor="middle" fill="#94A3B8" font-size="13" font-family="DM Sans, sans-serif">1 s audio</text>
+            <text x="245" y="286" text-anchor="middle" fill="#F8FAFC" font-size="13" font-family="DM Sans, sans-serif">64-bin</text>
+            <text x="245" y="306" text-anchor="middle" fill="#00C9B7" font-size="13" font-family="DM Sans, sans-serif">log-mel</text>
+            <text x="405" y="306" text-anchor="middle" fill="#F8FAFC" font-size="13" font-family="DM Sans, sans-serif">CNN · 3 classes</text>
+          </svg>
+          <figcaption>Field clip to spectrogram to a 98,019-parameter CNN.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="band" id="technology">
+      <div class="wrap">
+        <p class="eyebrow">How it works</p>
+        <h2>Four steps from a recording to a label</h2>
+        <ol class="steps">
+          <li>
+            <span>01</span>
+            <h3>Audio collection</h3>
+            <p>Training used one-second field-sensor clips. A phone WAV can be uploaded later as an experimental check; that path is a domain shift, not the measured test set.</p>
+          </li>
+          <li>
+            <span>02</span>
+            <h3>Signal processing</h3>
+            <p>Audio is resampled to 16 kHz, fixed at 1.0 second, and converted to a 64-bin log-mel spectrogram of shape 1×64×59.</p>
+          </li>
+          <li>
+            <span>03</span>
+            <h3>Deep learning</h3>
+            <p>A four-block CNN reads that spectrogram. The same weights run in PyTorch and, through ONNX, in this browser.</p>
+          </li>
+          <li>
+            <span>04</span>
+            <h3>Classification</h3>
+            <p>The model returns logits for leak, no leak, or environmental noise. The page applies softmax and shows every class score.</p>
+          </li>
+        </ol>
       </div>
     </section>
 
     <section id="demo">
-      <h2>Model demonstration</h2>
-      <p>Press a sample or drop a WAV. The page builds the same log-mel spectrogram used in training and runs <code>downloads/model.onnx</code>.</p>
-      <div class="samples" id="samples">
-        <button class="sample" type="button" data-src="samples/leak.wav"><span>leak</span></button>
-        <button class="sample" type="button" data-src="samples/no_leak.wav"><span>no_leak</span></button>
-        <button class="sample" type="button" data-src="samples/environmental_noise.wav"><span>environmental_noise</span></button>
-      </div>
-      <div class="demo-layout">
-        <div class="panel">
-          <p class="panel-label">Input</p>
-          <label class="dropzone" id="dropzone">
-            <input id="file-input" type="file" accept="audio/wav,audio/wave,audio/x-wav,.wav,audio/*">
-            Drop a WAV here, or click to choose one. You can also press a sample above.
-          </label>
-          <audio id="preview" controls hidden></audio>
+      <div class="wrap">
+        <p class="eyebrow">Live demo</p>
+        <h2>Analyze a one-second recording</h2>
+        <p class="section-lead">Field-sensor sample clips below match the training distribution. Uploading your own WAV is an experimental evaluation interface: the page loads <code>downloads/model.onnx</code> (copied from <code>weights/model.onnx</code> at build) and a result appears only after inference finishes. Phone recordings are not independently validated.</p>
+        <div class="samples" id="samples">
+          <button class="sample" type="button" data-src="samples/leak.wav">Leak sample</button>
+          <button class="sample" type="button" data-src="samples/no_leak.wav">No-leak sample</button>
+          <button class="sample" type="button" data-src="samples/environmental_noise.wav">Noise sample</button>
         </div>
-        <div class="panel">
-          <p class="panel-label">Prediction</p>
-          <p id="pred-class">—</p>
-          <p id="pred-conf"></p>
-          <div id="bars"></div>
-          <p id="status">Loading the ONNX model…</p>
+        <div class="demo-layout">
+          <div class="panel">
+            <p class="panel-label" id="input-label">Input</p>
+            <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-labelledby="input-label drop-copy">
+              <p id="drop-copy">Drop a WAV here</p>
+              <button class="btn btn-ghost" type="button" id="browse">Browse files</button>
+              <input id="file-input" type="file" accept="audio/wav,audio/wave,audio/x-wav,.wav,audio/*" aria-label="Choose a WAV file">
+            </div>
+            <p id="file-meta" class="file-meta" hidden></p>
+            <audio id="preview" controls hidden></audio>
+            <canvas id="wave" width="640" height="96" hidden aria-label="Waveform of the selected audio"></canvas>
+            <div class="demo-actions">
+              <button class="btn btn-primary" type="button" id="analyze" disabled>Analyze audio</button>
+              <button class="btn btn-ghost" type="button" id="reset">Reset</button>
+            </div>
+          </div>
+          <div class="panel">
+            <p class="panel-label">Prediction</p>
+            <div id="outcome" class="outcome" aria-live="polite">
+              <p id="pred-class">Awaiting analysis</p>
+              <p id="pred-conf">Choose a sample or a WAV, then run analysis.</p>
+            </div>
+            <canvas id="mel" width="640" height="140" hidden aria-label="Log-mel spectrogram used for inference"></canvas>
+            <div id="bars"></div>
+            <p id="status" role="status">Loading the ONNX model…</p>
+          </div>
         </div>
       </div>
-      <p class="fine">Browser inference uses <code>downloads/model.onnx</code>, exported from the same checkpoint as <code>weights/model.pth</code>. Logits are softmaxed in the page. Training clips are field sensors; a phone recording is allowed, but it is a domain shift.</p>
     </section>
 
-    <section id="results">
-      <h2>Results</h2>
-      <!--RESULTS:START-->
+    <section class="band" id="dataset">
+      <div class="wrap">
+        <p class="eyebrow">Dataset</p>
+        <h2>1,000 field clips, three classes</h2>
+        <p class="section-lead">Most leak and no-leak recordings come from an outdoor leakage-detection training base in Dongguan. Environmental noise mixes on-site sound with public background clips. Source: <a href="https://zenodo.org/records/18631450">Zenodo 18631450</a>.</p>
+        <div class="split-grid">
+          <div class="panel">
+            <h3>Class distribution</h3>
+            <!--DATASET:START-->
+<ul class="dist">
+<li><span>Leak</span><i style="--w:50.0%"></i><strong>500</strong></li>
+<li><span>No leak</span><i style="--w:38.6%"></i><strong>386</strong></li>
+<li><span>Environmental noise</span><i style="--w:11.4%"></i><strong>114</strong></li>
+</ul>
+<p>1000 clips total. Split 700 train / 150 validation / 150 test.</p>
+<!--DATASET:END-->
+          </div>
+          <div class="panel">
+            <h3>Stratified split, seed 42</h3>
+            <ul class="dist">
+              <li><span>Train</span><i style="--w:70%"></i><strong>700</strong></li>
+              <li><span>Validation</span><i style="--w:15%"></i><strong>150</strong></li>
+              <li><span>Test</span><i style="--w:15%"></i><strong>150</strong></li>
+            </ul>
+            <p>The test split is scored once, after the checkpoint is chosen on validation accuracy. Validation accuracy moved during training because the 150-clip val set is small and spectrogram augment is on; the saved weights are the 98.00% peak at epoch 15, not the last epoch. The full archive is fetched by <code>download_dataset.py</code> and is not stored in Git.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="model">
+      <div class="wrap">
+        <p class="eyebrow">Architecture</p>
+        <h2>Spectrogram CNN, 98,019 parameters</h2>
+        <ol class="flow">
+          <li>16 kHz waveform<br>1.0 second</li>
+          <li>Log-mel<br>64 × 59</li>
+          <li>Conv blocks<br>16 · 32 · 64 · 128</li>
+          <li>Dropout 0.35<br>linear head</li>
+          <li>Three logits<br>leak · no leak · noise</li>
+        </ol>
+        <div class="split-grid">
+          <article class="panel">
+            <h3>What is saved</h3>
+            <p><code>weights/model.pth</code> stores <code>state_dict</code>, class order, STFT settings, and the mel filterbank. <code>model.py</code> rebuilds the network with <code>build_model(num_classes=3, pretrained=False)</code>.</p>
+            <p>Reference command: <code>python predict.py --audio samples/leak.wav</code></p>
+          </article>
+          <article class="panel">
+            <h3>What the browser runs</h3>
+            <p>The repository file is <code>weights/model.onnx</code>. The live page copies it to <code>downloads/model.onnx</code> at build and runs that alias in ONNX Runtime Web. No audio is uploaded to a server.</p>
+            <p>Training used class-weighted cross-entropy on an RTX 5070 for 23 epochs with patience 8. Best validation accuracy was 98.00% at epoch 15. Later epochs moved around on the 150-clip val split; that is expected, not a change to the held-out 94.00% test score.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="results">
+      <div class="wrap">
+        <p class="eyebrow">Results</p>
+        <h2>Held-out test performance</h2>
+        <!--RESULTS:START-->
 <div class="stats">
   <article class="stat"><span>Test accuracy</span><strong>94.00%</strong></article>
   <article class="stat"><span>Macro F1</span><strong>93.13%</strong></article>
   <article class="stat"><span>Best validation accuracy</span><strong>98.00%</strong></article>
   <article class="stat"><span>Epochs run</span><strong>23</strong></article>
 </div>
-<p class="fine">Trained on NVIDIA GeForce RTX 5070. The network has 98,019 parameters. Weighted F1 is 93.99%. Largest test confusions: 3 leak predicted as no_leak; 3 no_leak predicted as leak; 1 no_leak predicted as environmental_noise.</p>
+<p class="fine">Trained on NVIDIA GeForce RTX 5070. The network has 98,019 parameters. Weighted F1 is 93.99%. Best validation accuracy 98.00% is the peak on the 150-clip val split, not the last epoch. Largest test confusions: 3 leak predicted as no_leak; 3 no_leak predicted as leak; 1 no_leak predicted as environmental_noise.</p>
 <div class="table-wrap"><table>
   <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
   <tbody><tr><td>leak</td><td>94.74%</td><td>96.00%</td><td>95.36%</td><td>75</td></tr><tr><td>no_leak</td><td>93.10%</td><td>93.10%</td><td>93.10%</td><td>58</td></tr><tr><td>environmental_noise</td><td>93.75%</td><td>88.24%</td><td>90.91%</td><td>17</td></tr></tbody>
 </table></div>
 <!--RESULTS:END-->
-      <div class="figures">
-        <figure class="figure">
-          <img src="images/training_curves.png" alt="Training and validation accuracy">
-          <figcaption>Training and validation accuracy</figcaption>
-        </figure>
-        <figure class="figure">
-          <img src="images/confusion_matrix.png" alt="Test confusion matrix">
-          <figcaption>Test confusion matrix</figcaption>
-        </figure>
+        <div class="figures">
+          <figure class="figure">
+            <img src="images/training_curves.png" alt="Training and validation accuracy across 23 epochs, with the 98.00 percent peak marked at epoch 15">
+            <figcaption>Training and validation accuracy. The marker is the saved 98.00% peak at epoch 15; later val movement is the 150-clip split, not a change to test 94.00%.</figcaption>
+          </figure>
+          <figure class="figure">
+            <img src="images/confusion_matrix.png" alt="Test confusion matrix for leak, no leak, and environmental noise">
+            <figcaption>Test confusion matrix</figcaption>
+          </figure>
+        </div>
       </div>
     </section>
 
-    <section id="files">
-      <h2>Downloads for evaluation</h2>
-      <p>These links point at the files deployed with this site. The same weights live in the GitHub repository at the paths below.</p>
-      <ul class="file-list">
-        <li><a href="downloads/model.pth">model.pth</a><span>weights/model.pth</span></li>
-        <li><a href="downloads/model.onnx">model.onnx</a><span>weights/model.onnx</span></li>
-        <li><a href="downloads/config.json">config.json</a><span>weights/config.json</span></li>
-        <li><a href="downloads/class_names.json">class_names.json</a><span>weights/class_names.json</span></li>
-        <li><a href="downloads/model_manifest.json">model_manifest.json</a><span>model_manifest.json</span></li>
-        <li><a href="downloads/metrics.json">metrics.json</a><span>outputs/metrics.json</span></li>
-        <li><a href="report.html">Project report</a><span>report/PROJECT_REPORT.md</span></li>
-        <li><a href="downloads/presentation.pptx">Presentation</a><span>presentation/presentation.pptx</span></li>
-        <li><a href="https://zenodo.org/records/18631450">Zenodo acoustic set</a><span>secondary dataset</span></li>
-      </ul>
-      <h3>Project links</h3>
-      <!--LINKS:START-->
+    <section id="method">
+      <div class="wrap">
+        <p class="eyebrow">Research</p>
+        <h2>Method, evaluation, and limits</h2>
+        <div class="method-grid">
+          <article>
+            <h3>Problem</h3>
+            <p>A leak can run until damage is visible. A one-second microphone clip is a low-cost screening signal, not a utility alarm.</p>
+          </article>
+          <article>
+            <h3>Objective</h3>
+            <p>Train a compact classifier, hold out a test set, publish the checkpoint, and let a browser run the same network.</p>
+          </article>
+          <article>
+            <h3>Preprocessing</h3>
+            <p>Mono audio, 16 kHz, 1.0 s, Hann STFT with n_fft 1024 and hop 256, 64 Slaney mel bands, log power clipped at −80 dB.</p>
+          </article>
+          <article>
+            <h3>Training</h3>
+            <p>Adam at 1e-3, batch 32, inverse-frequency class weights, spectrogram masking and noise, early stopping patience 8.</p>
+          </article>
+          <article>
+            <h3>Evaluation</h3>
+            <p>Seed 42, 70/15/15. Test accuracy 94.00% (141/150), macro F1 93.13%, weighted F1 93.99%.</p>
+          </article>
+          <article>
+            <h3>Limits</h3>
+            <p>Training used field acoustic sensors, not a typical smartphone. Phone upload is experimental and unvalidated. The noise class has 114 clips. A phone recording can be confidently wrong.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="downloads">
+      <div class="wrap">
+        <p class="eyebrow">Downloads</p>
+        <h2>Files an evaluator can open</h2>
+        <ul class="file-list">
+          <li><a href="downloads/model.pth">PyTorch weights</a><span>weights/model.pth</span></li>
+          <li><a href="downloads/model.onnx">ONNX model</a><span>weights/model.onnx</span></li>
+          <li><a href="downloads/config.json">Configuration</a><span>weights/config.json</span></li>
+          <li><a href="downloads/class_names.json">Class names</a><span>weights/class_names.json</span></li>
+          <li><a href="downloads/model_manifest.json">Manifest</a><span>model_manifest.json</span></li>
+          <li><a href="downloads/metrics.json">Metrics</a><span>outputs/metrics.json</span></li>
+          <li><a href="report.html">Project report</a><span>report/PROJECT_REPORT.md</span></li>
+          <li><a href="downloads/presentation.pptx">Presentation</a><span>presentation/presentation.pptx</span></li>
+          <li><a href="https://zenodo.org/records/18631450">Zenodo acoustic set</a><span>dataset record</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="wrap about-grid">
+        <div>
+          <p class="eyebrow">About</p>
+          <h2>An academic demonstration</h2>
+          <p>WaterGuard AI is the name of this course page, not a water utility or a company. The work is a Deep Learning semester project: a spectrogram CNN, public weights, and a browser demo.</p>
+          <p>Stack: PyTorch, ONNX Runtime Web, 16 kHz log-mel features, and a static Vercel site. Optional phone clips with <code>collect_audio.py</code> are a later domain-shift experiment; they were not part of the reported 94.00% test score.</p>
+        </div>
+        <div class="panel">
+          <h3>Project links</h3>
+          <!--LINKS:START-->
 <ul class="link-list">
 <li><a href="https://github.com/Zaidranjha095/water-pipe-leakage-detection">GitHub repository</a><span>https://github.com/Zaidranjha095/water-pipe-leakage-detection</span></li>
-<li><span class="pending">YouTube walkthrough will be added before final submission.</span></li>
-<li><span class="pending">LinkedIn post will be added before final submission.</span></li>
+<li><a href="https://youtu.be/wDVgfvbutMc">YouTube walkthrough</a><span>https://youtu.be/wDVgfvbutMc</span></li>
+<li><a href="https://www.linkedin.com/posts/zaid-ahmad-0bb173252_deeplearning-audioclassification-computervision-share-7522126288854151168-DFHo">LinkedIn post</a><span>https://www.linkedin.com/posts/zaid-ahmad-0bb173252_deeplearning-audioclassification-computervision-share-7522126288854151168-DFHo</span></li>
 <li><a href="https://water-pipe-leakage-detection.vercel.app">Vercel deployment</a><span>https://water-pipe-leakage-detection.vercel.app</span></li>
 </ul>
 <!--LINKS:END-->
-      <h3>Load the PyTorch checkpoint</h3>
-      <pre><code>import torch
-from model import build_model
-
-checkpoint = torch.load("weights/model.pth", map_location="cpu", weights_only=False)
-model = build_model(num_classes=len(checkpoint["classes"]), pretrained=False)
-model.load_state_dict(checkpoint["state_dict"])
-model.eval()</code></pre>
+          <p><a href="report.html">Read the written report</a></p>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="wrap footer-inner">
-      <!--FOOTER:START-->
+    <div class="wrap">
       <p>Zaid Ahmed · SU92-BSCSM-F23-553 · Deep Learning</p>
-      <!--FOOTER:END-->
-      <p>Educational demonstration. Training audio uses field sensors, and this model is not a system for plumbing or hazardous leaks.</p>
+      <p>Educational screening aid. Training audio uses field sensors. This model is not a plumbing or safety system.</p>
     </div>
   </footer>
 
-  <script src="backdrop.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.min.js"></script>
   <script src="app.js"></script>
 </body>

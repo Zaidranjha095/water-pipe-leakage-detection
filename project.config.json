@@ -5,8 +5,8 @@
   "course": "Deep Learning",
   "githubUrl": "https://github.com/Zaidranjha095/water-pipe-leakage-detection",
   "vercelUrl": "https://water-pipe-leakage-detection.vercel.app",
-  "youtubeUrl": "",
-  "linkedinUrl": "",
+  "youtubeUrl": "https://youtu.be/wDVgfvbutMc",
+  "linkedinUrl": "https://www.linkedin.com/posts/zaid-ahmad-0bb173252_deeplearning-audioclassification-computervision-share-7522126288854151168-DFHo",
   "datasetName": "Water-distribution acoustic clips (Zenodo 18631450)",
   "datasetUrl": "https://zenodo.org/records/18631450",
   "datasetCitation": "Acoustic data for the manuscript entitled 'Self-supervised acoustic leakage detection for water distribution systems: A real-time diagnosis framework under data scarcity'. Zenodo, 2026. https://doi.org/10.5281/zenodo.18631450"

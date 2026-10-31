@@ -102,7 +102,7 @@ Class counts in the copy used here:
 
 The split is stratified with seed 42: {counts['train']['total']} train, {counts['val']['total']} validation, {counts['test']['total']} test (70% / 15% / 15%). Early stopping watches validation accuracy. The test set is used once, after the checkpoint is chosen.
 
-These sensors are not smartphone microphones. The live page still accepts a WAV from a phone so an evaluator can try the intended capture device. `collect_audio.py` records extra 1-second 16 kHz clips into `data/raw/<class>/` if household data are added later. Phone acoustics are a domain shift; they are not claimed as the training distribution.
+These sensors are not smartphone microphones. The live page still accepts a WAV as an experimental evaluation interface. Phone performance has not been independently validated. `collect_audio.py` records extra 1-second 16 kHz clips into `data/raw/<class>/` if household data are added later. Phone acoustics are a domain shift; they are not the training distribution.
 
 The full archive is not committed. `download_dataset.py` fetches the three Zenodo RAR files.
 
@@ -116,7 +116,7 @@ Each clip is loaded as mono audio, resampled to 16 kHz, and padded or truncated 
 
 Training ran on {training['gpu']} with batch size {training['batch_size']}. The loss is cross-entropy with inverse-frequency weights on the training split only: leak {weights['leak']:.3f}, no_leak {weights['no_leak']:.3f}, environmental_noise {weights['environmental_noise']:.3f}. Adam used learning rate {training['learning_rate']}. Spectrograms were augmented with time rolls, frequency masks, time masks, and Gaussian noise.
 
-The run lasted {training['epochs_ran']} epochs with early stopping patience {training['patience']}. Best validation accuracy was {pct(training['best_val_accuracy'])}. That checkpoint was reloaded before the test evaluation.
+The run lasted {training['epochs_ran']} epochs with early stopping patience {training['patience']}. Best validation accuracy was {pct(training['best_val_accuracy'])} at epoch 15. Later validation scores moved on the 150-clip split because spectrogram augment is stochastic and the val set is small; the saved weights are the peak checkpoint, not the last epoch. That checkpoint was reloaded before the test evaluation.
 
 ## Results
 
@@ -140,12 +140,12 @@ Confusion matrix (rows true, columns predicted), class order leak / no_leak / en
 
 ## Web deployment and repository
 
-The static site in `web/` states the problem, the dataset, the code layout, and these results. Uploading a WAV, or clicking a sample, computes the same log-mel spectrogram in the browser and runs `model.onnx` with ONNX Runtime Web.
+The static site in `web/` states the problem, the dataset, the code layout, and these results. Sample buttons use field-sensor clips from the training distribution. Uploading a WAV is an experimental check: the browser computes the same log-mel spectrogram and runs the ONNX network with ONNX Runtime Web.
 
 Canonical files for an automated check:
 
-- `weights/model.pth` — PyTorch checkpoint
-- `weights/model.onnx` — browser copy of the same network
+- `weights/model.pth` — PyTorch checkpoint in the repository
+- `weights/model.onnx` — ONNX export in the repository; the live page copies it to `downloads/model.onnx` at build (`site_onnx` in `model_manifest.json`)
 - `weights/config.json` — class order, STFT settings, and mel filterbank
 - `weights/class_names.json` — class order alone
 - `model_manifest.json` — paths and the prediction command
@@ -258,6 +258,10 @@ def blank_slide(prs, title, notes):
 
 
 def write_slides(config: dict, metrics: dict) -> None:
+    from slide_deck import build_presentation
+
+    build_presentation(config, metrics, ROOT / "presentation" / "presentation.pptx")
+    return
     test = metrics["test"]
     training = metrics["training"]
     counts = metrics["counts"]
@@ -410,7 +414,7 @@ def write_slides(config: dict, metrics: dict) -> None:
         Inches(5),
         [
             "weights/model.pth — load state_dict with build_model() from model.py.",
-            "weights/model.onnx — the file the Vercel page runs in the browser.",
+            "weights/model.onnx in the repo; the Vercel page copies it to downloads/model.onnx.",
             "python predict.py --audio samples/leak.wav",
             "Report, slides, and this walkthrough are linked from the site.",
         ],
@@ -461,36 +465,36 @@ def write_voiceover(config: dict, metrics: dict) -> None:
     counts = metrics["counts"]
     text = f"""# Voiceover script (Roman Urdu)
 
-Har heading ek slide hai. Recording se pehle slides open rakho. Mid-slide click mat karna.
+Har heading ek slide hai. Animation khud chalti hai. Slide ke beech mein click mat karna, warna agli slide chali jayegi. Slides khud Roman Urdu mein hain; yeh script thori lambi hai recording ke liye.
 
 ## Title
-Assalamualaikum. Mein Zaid Ahmed hoon, roll number SU92-BSCSM-F23-553. Deep Learning ka semester project smartphone audio se water-pipe leakage detection hai. Model ek second ki recording sun kar teen labels deta hai: leak, no leak, aur environmental noise.
+Assalamualaikum. Mein Zaid Ahmed hoon, roll number SU92-BSCSM-F23-553. Project smartphone audio se water-pipe leakage detection hai. Model ek second ki recording sun kar teen labels deta hai: leak, no leak, aur environmental noise.
 
-## Why acoustic leak screening
-Pipe ka leak der se nazar aata hai. Microphone se short clip lena sasta hai. Yeh pehla screening tool hai, plumber ya safety system nahi.
+## Masla
+Pipe ka leak der se nazar aata hai. Phone se ek second ki clip lena sasta hai. Yeh pehla screening tool hai, plumber ya safety system nahi.
 
-## Research question
+## Sawal
 Sawal yeh hai ke compact CNN leak, quiet pipe, aur background noise alag kar sakta hai ya nahi. Training public field dataset par hui. Demo phone ki WAV bhi le leta hai, lekin phone mic training distribution nahi hai.
 
 ## Dataset
 Dataset Zenodo record 18631450 hai. Kul {counts['total']} clips: leak {counts['all']['leak']}, no leak {counts['all']['no_leak']}, noise {counts['all']['environmental_noise']}. Stratified split seed 42: {counts['train']['total']} train, {counts['val']['total']} validation, {counts['test']['total']} test.
 
-## From waveform to spectrogram
+## Features
 Har clip 16 kilohertz, one second. Hann STFT, n fft 1024, hop 256, 64 mel bands. Shape 1 by 64 by 59. Mel filterbank checkpoint ke saath save hai taake browser wahi features banaye.
 
-## Spectrogram CNN
+## Model
 Char convolution blocks hain, {training['parameter_count']:,} parameters. Dropout ke baad teen logits. Architecture model.py ke build_model se wapas banti hai.
 
-## Training protocol
+## Training
 Training {training['gpu']} par hui. Adam learning rate 1e-3, class-weighted loss, {training['epochs_ran']} epochs, patience {training['patience']}. Best validation accuracy {pct(training['best_val_accuracy'])}. Uske baad test ek dafa chala.
 
-## Held-out test results
-Test accuracy {pct(test['accuracy'])} hai, {int(round(test['accuracy'] * counts['test']['total']))} out of {counts['test']['total']}. Macro F1 {pct(test['macro_f1'])} hai. {confusion_sentence(metrics)}
+## Results
+Test accuracy {pct(test['accuracy'])} hai, {int(round(test['accuracy'] * counts['test']['total']))} out of {counts['test']['total']}. Macro F1 {pct(test['macro_f1'])} hai. Sab se bari ghaltiyan: 3 leak ko no leak, 3 no leak ko leak, aur 1 no leak ko noise.
 
-## What an evaluator can download
+## Files
 Evaluator weights/model.pth download kare. ONNX file browser ke liye hai. Command hai python predict.py --audio samples/leak.wav.
 
-## Limits and optional phone clips
+## Limits
 Field sensors kitchen phone nahi. Noise class chhoti hai. collect_audio.py se baad mein ghar ki clips add ho sakti hain. Demo ko safety decision mat banao.
 
 ## Links
@@ -587,7 +591,7 @@ Class order: leak, no_leak, environmental_noise. The network returns logits.
 python predict.py --audio samples/leak.wav
 ```
 
-`model_manifest.json` lists the same paths. `weights/model.onnx` is the browser copy.
+`model_manifest.json` lists repository paths (`weights/`) and site aliases (`downloads/`). The browser loads `downloads/model.onnx`, copied from `weights/model.onnx` at build.
 
 ## Project layout
 
